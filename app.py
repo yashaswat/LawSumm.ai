@@ -62,14 +62,18 @@ for file in files:
                        file_name='{0}'.format(file))
 
 st.divider()
-st.markdown('''**LawSumm.ai** is an AI-powered Natural Language Processing application that can automatically summarize any Indian 
-            legal document, such as court judgments, statutes, contracts, and more. **LawSumm.ai** uses state-of-the-art deep learning 
-            models that are trained on a large corpus of Indian legal text, collected from various sources and domains. **LawSumm.ai** 
-            can extract the most relevant and important information from any legal document, such as the facts, arguments, reasoning, 
-            cited laws, cited judgments, and outcome. **LawSumm.ai** can also generate concise and coherent summaries that capture the 
-            essence and context of the legal document. **LawSumm.ai** is designed to help lawyers, judges, researchers, students, and 
-            anyone interested in Indian law to access and comprehend legal information faster and easier. **LawSumm.ai** is the ultimate 
-            AI legal document summarizer for India. Try it now and see for yourself!''')
+st.write('''**LawSumm.ai** is an AI-powered Natural Language Processing application that can automatically summarize any Indian 
+            legal document, such as court judgments, statutes, contracts, and more. It uses state-of-the-art deep learning 
+            models that are trained on a large corpus of Indian legal text, collected from various sources and domains.''')
+
+st.write('''Our LLM model can extract the most relevant and important information from any legal document, such as the facts, arguments,
+            reasoning, cited laws, cited judgments, and outcome. it can also generate concise and coherent summaries that capture the 
+            essence and context of the legal document.''')
+            
+st.write('''This app is designed to help lawyers, judges, researchers, students, and anyone interested in Indian law to access and 
+            comprehend legal information faster and easier.''')
+            
+st.write('''**LawSumm.ai** is the ultimate AI legal document summarizer for India. Try it now and see for yourself!''')                 
 st.divider()
 
 file = st.file_uploader('UPLOAD YOUR LEGAL DOCUMENT: ', accept_multiple_files=False, type='txt')
@@ -87,12 +91,12 @@ if file is not None:
     with open(os.path.join(directory, "{0}_summary.txt".format(file_name)), "w") as f:
         f.write(summary)
 
-    #tab1, tab2 = st.tabs([' Summary', ':book: Original Document'])
+    # tab1, tab2 = st.tabs([' Summary', ':book: Original Document'])
     
-    #tab1.write('\n')
-    #tab1.write(summary)
-    #tab2.write('\n')
-    #tab2.write(string_data)
+    # tab1.write('\n')
+    # tab1.write(summary)
+    # tab2.write('\n')
+    # tab2.write(string_data)
     
     nlp = spacy.load("en_core_web_sm")
     doc = nlp(summary)

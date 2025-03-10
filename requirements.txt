@@ -1,0 +1,7 @@
+transformers
+streamlit
+streamlit_extras
+streamlit_lottie
+streamlit_file_browser
+spacy
+spacy_streamlit
