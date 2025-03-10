@@ -1,5 +1,8 @@
 import os
 from io import StringIO
+import pandas as pd
+from docx import Document
+
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 import streamlit as st 
@@ -43,23 +46,23 @@ with col1:
 with col2:
     st.title('LawSumm: Indian Legal Text Summarizer')
     
-st.sidebar.header('Past Summaries')
+st.sidebar.header('Summary History')
 
 directory = 'prev_summaries'
 files = os.listdir(directory)
 
 for file in files:
     
-    dropdown = st.sidebar.expander('Case: {0}'.format(file))
+    dropdown = st.sidebar.expander(f'Case: {file.rstrip('.txt')}')
 
     with open(os.path.join(directory, file), "r") as f:
         file_text = f.read()
     
     dropdown.write(file_text)
     
-    dropdown.download_button('Download Case: {0}'.format(file), 
+    dropdown.download_button(f'Download Case: {file.rstrip('.txt')}'.format(file), 
                        data = file_text,
-                       file_name='{0}'.format(file))
+                       file_name=file, type='primary')
 
 st.divider()
 st.write('''**LawSumm.ai** is an AI-powered Natural Language Processing application that can automatically summarize any Indian 
@@ -67,7 +70,7 @@ st.write('''**LawSumm.ai** is an AI-powered Natural Language Processing applicat
             models that are trained on a large corpus of Indian legal text, collected from various sources and domains.''')
 
 st.write('''Our LLM model can extract the most relevant and important information from any legal document, such as the facts, arguments,
-            reasoning, cited laws, cited judgments, and outcome. it can also generate concise and coherent summaries that capture the 
+            reasoning, cited laws, cited judgments, and outcome. It can also generate concise and coherent summaries that capture the 
             essence and context of the legal document.''')
             
 st.write('''This app is designed to help lawyers, judges, researchers, students, and anyone interested in Indian law to access and 
@@ -81,11 +84,12 @@ st.write('\n')
 got_input = False
 
 file, text_area = None, None
+file_name = ''
 string_data = ''
 
 if input_method == 'File':
     
-    file = st.file_uploader('Upload your legal document: ', accept_multiple_files=False, type='txt')
+    file = st.file_uploader('Upload your legal document: ', accept_multiple_files=False, type=['txt', 'docx'])
     if file:
         got_input = True
 
@@ -96,41 +100,80 @@ elif input_method == 'Text':
     text_area = st.text_area('Enter your legal text below: ', placeholder='Type or paste text here...', height=680)
     
     col1, col2 = st.columns([0.75, 0.25])
-    if col2.button('Submit data', use_container_width=True):
+    if col2.button('Submit data', use_container_width=True, type='primary'):
         got_input = True
 
 if got_input:
-    
+
     if file is not None:
-        bytes_data = file.getvalue()
-        string_data = StringIO(bytes_data.decode("utf-8")).read()
-        file_name = str(file.name).replace('.txt', '')
+        
+        if file.type == 'text/plain':
+            bytes_data = file.getvalue()
+            string_data = StringIO(bytes_data.decode("utf-8")).read()
+            
+            file_name = str(file.name).replace('.txt', '')
+        
+        elif file.type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            doc = Document(file)
+            
+            string_data = ''
+            for para in doc.paragraphs:
+                string_data += para.text + '\n'
+            
+            file_name = str(file.name).replace('.docx', '')
         
     elif text_area is not None:
         string_data = text_area
         file_name = query_title
-    
-    st.markdown('### Your Summarized Case :pencil: \n')
-    
+
+    st.markdown('## Your Summarized Case :pencil: ')
+    st.write('\n\n')
+
     summary = model_summarization(string_data)
     
-    with open(os.path.join(directory, "{0}_summary.txt".format(file_name)), "w") as f:
+    with open(os.path.join(directory, f"{file_name}_summary.txt"), "w") as f:
         f.write(summary)
 
-    # tab1, tab2 = st.tabs([' Summary', ':book: Original Document'])
+    ner_help = st.toggle('See extra info about entity labels')
     
-    # tab1.write('\n')
-    # tab1.write(summary)
-    # tab2.write('\n')
-    # tab2.write(string_data)
+    data = {
+        "NER Label": ["LAW", "ORG", "PERSON", "GPE", "DATE", "MONEY", "PERCENT", "NORP", "LOC", "EVENT"],
+        "Meaning": [
+            "Named legal documents and provisions",
+            "Organizations (corporate & governmental)",
+            "People, including judges, lawyers, parties",
+            "Geopolitical entities (countries, states, cities)",
+            "Dates (absolute and relative)",
+            "Monetary values",
+            "Percentage values",
+            "Nationalities, religious, or political groups",
+            "Locations (not geopolitical)",
+            "Named events"
+        ]
+    }
+
+    ner_info_table = pd.DataFrame(data)
+    
+    if ner_help:
+        
+        col1, col2 = st.columns([0.1, 0.9])
+        
+        info_box = col2.container(border=True)
+        info_box.info('''The NER Labels allow you to highlight and view specific entities in the text.
+                With this feature, you can quickly ascertain information such as the key dates, people/organisations
+                involved and laws cited in your legal document.''', icon="ℹ️")
+                    
+        info_box.table(ner_info_table)
     
     nlp = spacy.load("en_core_web_sm")
     doc = nlp(summary)
-    visualize_ner(doc, labels=nlp.get_pipe("ner").labels, show_table=False, title=False)
-        
+    legal_labels = ["LAW", "ORG", "PERSON", "GPE", "DATE", "MONEY", "PERCENT", "NORP", "LOC", "EVENT"]
+    
+    visualize_ner(doc, labels=legal_labels, show_table=False, title=False)
+    
     doc_tokens = len(string_data.split())
     summary_tokens = len(summary.split())
-    
+
     token_change = doc_tokens - summary_tokens
     change = -(token_change/doc_tokens)*100
     change = round(change, 2)
@@ -138,8 +181,9 @@ if got_input:
     st.write('\n')
     col1, col2 = st.columns(2)
     col1.metric('Words in Original Document', doc_tokens)
-    col2.metric('Words in Summary', summary_tokens, delta = '{0}%'.format(change))
+    col2.metric('Words in Summary', summary_tokens, delta = f'{change}%')
         
     st.download_button('Download your summarized case file',
                     data=summary, 
-                    file_name='{0}_summary.txt'.format(file_name))
+                    file_name=f'{file_name}_summary.txt',
+                    type='primary')
