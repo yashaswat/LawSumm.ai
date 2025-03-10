@@ -45,7 +45,7 @@ with col2:
     
 st.sidebar.header('Past Summaries')
 
-directory = 'C:/LawSumm.ai/prev_summaries'
+directory = 'prev_summaries'
 files = os.listdir(directory)
 
 for file in files:
