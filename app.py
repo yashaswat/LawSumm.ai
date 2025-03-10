@@ -76,18 +76,44 @@ st.write('''This app is designed to help lawyers, judges, researchers, students,
 st.write('''**LawSumm.ai** is the ultimate AI legal document summarizer for India. Try it now and see for yourself!''')                 
 st.divider()
 
-file = st.file_uploader('UPLOAD YOUR LEGAL DOCUMENT: ', accept_multiple_files=False, type='txt')
+input_method = st.segmented_control('CHOOSE YOUR INPUT METHOD:', options=['File', 'Text'])
+st.write('\n')
+got_input = False
 
-if file is not None:
+file, text_area = None, None
+string_data = ''
 
-    bytes_data = file.getvalue()
-    string_data = StringIO(bytes_data.decode("utf-8")).read()
+if input_method == 'File':
+    
+    file = st.file_uploader('Upload your legal document: ', accept_multiple_files=False, type='txt')
+    if file:
+        got_input = True
+
+elif input_method == 'Text':
+    
+    query_title = st.text_input('Enter a title for your query: ',
+                                placeholder='This title will be used to save summary in the History Sidebar')
+    text_area = st.text_area('Enter your legal text below: ', placeholder='Type or paste text here...', height=680)
+    
+    col1, col2 = st.columns([0.75, 0.25])
+    if col2.button('Submit data', use_container_width=True):
+        got_input = True
+
+if got_input:
+    
+    if file is not None:
+        bytes_data = file.getvalue()
+        string_data = StringIO(bytes_data.decode("utf-8")).read()
+        file_name = str(file.name).replace('.txt', '')
+        
+    elif text_area is not None:
+        string_data = text_area
+        file_name = query_title
     
     st.markdown('### Your Summarized Case :pencil: \n')
     
     summary = model_summarization(string_data)
     
-    file_name = str(file.name).replace('.txt', '')
     with open(os.path.join(directory, "{0}_summary.txt".format(file_name)), "w") as f:
         f.write(summary)
 
